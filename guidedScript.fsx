@@ -16,6 +16,7 @@
 // you can "live code" and see what happens.
 
 // Try typing let i = 1337 in the script file, 
+let i = 1337
 // right-click and select "Execute in interactive" (Visual Studio) or ALT+ENTER (Visual Studio Code).
 
 // HINT: while you can write directly into FSI (F# Interactive), you need 
@@ -41,7 +42,7 @@ y <- 43
 // lines and execute them "together"):
 let greet name = 
     printfn "Hello, %s" name
-
+greet "Max"
 // let also binds a name to a function.
 // greet is a function with one argument, name.
 // You should be able to call this function by entering
@@ -80,9 +81,7 @@ open System.IO
 // returns an array of strings for each line 
 
 // [ YOUR CODE GOES HERE! ]
-
-
-
+let lines = File.ReadAllLines("shoppingcartpositions.csv")
 
 // 2. CLEANING UP HEADERS
  
@@ -98,7 +97,7 @@ let someNumbers = [| 0 .. 10 |] // create an array from 0 to 10
 let first = someNumbers.[0] 
 // You can also slice the array:
 let twoToFive = someNumbers.[ 1 .. 4 ] // grab a slice
-let upToThree = someNumbers.[ .. 2 ] 
+let upToThree = someNumbers.[..2] 
 // </F# QUICK-STARTER> 
 
 // [ YOUR CODE GOES HERE! ]
@@ -139,7 +138,7 @@ let splitResult = csvToSplit.Split(',')
  
  
 // [ YOUR CODE GOES HERE! ]
-
+let mutable linesArr = lines.[1..] |> Array.map (fun s -> s.Split(','))
 
 
  
@@ -178,10 +177,16 @@ let convertedDecimal = Convert.ToDecimal("43.2")
 // discover what kind of operations (e.g. fold, groupBy etc) are supported by standard library.
 
 // [ YOUR CODE GOES HERE! ]
+type Item = { ItemId:int; CustomerId:int; ItemName:string; Count:int; ItemPrice:decimal }
+type OrderItem = { ItemId:int; ItemName:string; Count:int; ItemPrice:decimal }
+type Order = { CustomerId:int; Price:decimal; Discount:decimal; Items:OrderItem[] }
 
-
-
-
+let mutable items = linesArr |> Array.map (fun s -> {
+    ItemId = (int)s.[1];
+    CustomerId = (int)s.[0];
+    ItemName = s.[2];
+    Count = (int)s.[3];
+    ItemPrice = Convert.ToDecimal(s.[4]) })
 
 // 5. VALIDATION
 
@@ -193,18 +198,17 @@ let convertedDecimal = Convert.ToDecimal("43.2")
 // and returns a boolean indicating if an item is valid.
 
 // [ YOUR CODE GOES HERE! ]
-
-
-
+let isValid (item: Item) =
+    match (item.Count, item.ItemPrice) with
+    | count, price when count > 0 && price > 0.0m -> true
+    | _ -> false
 
 // Now use these functions to filter out the shopping carts containing
 // invalid entries.
 // Array functions such as Array.filter and Array.exists may come in handy.
 
 // [ YOUR CODE GOES HERE! ]
-
-
-
+let validItems = items |> Array.filter(fun item -> isValid(item))
 
 // 6. ORDER CREATION
 
@@ -277,8 +281,24 @@ let doSomthingColorful palette =
 
 // now design your order type and create orders out of shopping carts!
 // [ YOUR CODE GOES HERE! ]
-
-
+let groupedItems = validItems |> Array.groupBy(fun (item: Item) -> item.CustomerId)
+let customerOrders = groupedItems |> Array.map(
+    fun tuple -> {
+        CustomerId = (fst(tuple));
+        Price = (snd(tuple)) 
+            |> Array.map(fun item -> item.ItemPrice)
+            |> Array.sum; // TODO Count fehlt
+        Discount = 0.2m;
+        // TODO    
+        //Discount = (snd(tuple)) 
+        //    |> Array.map(fun item -> item.ItemPrice)
+        //    |> Array.sum > 1000 -> 0.2m
+        //    | _ -> 0.0m;
+        Items = (snd(tuple)) |> Array.map(fun item -> {
+            ItemId = item.ItemId;
+            ItemName = item.ItemName;
+            Count = item.Count;
+            ItemPrice = item.ItemPrice }) })
 
 // Now, calculate the price of each order and modify those that cost more than 1000 
 // with a discount position of 20 and calculate sums again
